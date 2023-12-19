@@ -248,7 +248,7 @@ def main():
                         default=True)
     parser.add_argument('--match_variance', type=bool,
                         default=True)
-    parser.add_argument('--semitone_offset', type=float,
+    parser.add_argument('--semitone_shift', type=float,
                         default=0)
     a = parser.parse_args()
 
