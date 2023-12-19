@@ -109,13 +109,13 @@ def VC(a, hierspeech):
 
     ii = f0 != 0
     j = t_f0 != 0
-    if j.numel() and (a.match_pitch or a.match_variance or a.semitone_offset):
+    if j.numel() and (a.match_pitch or a.match_variance or a.semitone_shift):
         f0, t_f0 = f0.log2(), t_f0.log2()
         if a.match_pitch:
             f0[ii] = (f0[ii] - f0[ii].mean()) + t_f0[j].mean()
         if a.match_variance:
             f0[ii] = f0[ii] / f0[ii].std() * t_f0[j].std()
-        f0 += a.semitone_offset / 12
+        f0 += a.semitone_shift / 12
         f0 = f0.exp2() # t_f0 isn't used later
 
     denorm_f0 = torch.log(torch.FloatTensor(f0+1).cuda())
@@ -244,9 +244,9 @@ def main():
                         default=0.333)
     parser.add_argument('--denoise_ratio', type=float,
                         default=0.8)
-    parser.add_argument('--match_pitch', type=boolean,
+    parser.add_argument('--match_pitch', type=bool,
                         default=True)
-    parser.add_argument('--match_variance', type=boolean,
+    parser.add_argument('--match_variance', type=bool,
                         default=True)
     parser.add_argument('--semitone_offset', type=float,
                         default=0)
