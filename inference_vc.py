@@ -87,9 +87,6 @@ def VC(a, hierspeech):
         f0 = f0.astype(np.float32)
         f0 = f0.squeeze(0) 
 
-    ii = f0 != 0
-    f0[ii] = (f0[ii] - f0[ii].mean()) / f0[ii].std()
-
     y_pad = F.pad(source_audio, (40, 40), "reflect")
     x_w2v = w2v(y_pad.cuda())
     x_length = torch.LongTensor([x_w2v.size(2)]).to(device)
@@ -109,9 +106,18 @@ def VC(a, hierspeech):
         t_f0 = np.zeros((1, 1, target_audio.shape[-1] // 80))
         t_f0 = t_f0.astype(np.float32)
         t_f0 = t_f0.squeeze(0)
-    j = t_f0 != 0
 
-    f0[ii] = ((f0[ii] * t_f0[j].std()) + t_f0[j].mean()).clip(min=0)
+    ii = f0 != 0
+    j = t_f0 != 0
+    if j.numel() and (a.match_pitch or a.match_variance or a.semitone_offset):
+        f0, t_f0 = f0.log2(), t_f0.log2()
+        if a.match_pitch:
+            f0[ii] = (f0[ii] - f0[ii].mean()) + t_f0[j].mean()
+        if a.match_variance:
+            f0[ii] = f0[ii] / f0[ii].std() * t_f0[j].std()
+        f0 += a.semitone_offset / 12
+        f0 = f0.exp2() # t_f0 isn't used later
+
     denorm_f0 = torch.log(torch.FloatTensor(f0+1).cuda())
     # We utilize a hop size of 320 but denoiser uses a hop size of 400 so we utilize a hop size of 1600
     ori_prompt_len = target_audio.shape[-1]
@@ -238,6 +244,12 @@ def main():
                         default=0.333)
     parser.add_argument('--denoise_ratio', type=float,
                         default=0.8)
+    parser.add_argument('--match_pitch', type=boolean,
+                        default=True)
+    parser.add_argument('--match_variance', type=boolean,
+                        default=True)
+    parser.add_argument('--semitone_offset', type=float,
+                        default=0)
     a = parser.parse_args()
 
     global device, hps, h_sr,h_sr48, hps_denoiser
